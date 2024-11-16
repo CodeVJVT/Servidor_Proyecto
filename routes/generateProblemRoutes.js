@@ -121,9 +121,10 @@ router.post("/generate-problem", async (req, res) => {
     });
   }
   try {
-    const fetch = (await import("node-fetch")).default;
-
-    const response = await fetch("http://127.0.0.1:11434/api/generate", {
+    const fetch = require("node-fetch");
+    const OLLAMA_BASE_URL =
+      process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

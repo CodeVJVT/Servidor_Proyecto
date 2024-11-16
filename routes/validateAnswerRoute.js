@@ -57,8 +57,9 @@ router.post("/validate-answer", async (req, res) => {
 
     const normalizedUserCode = normalizeCode(userCode);
     const normalizedSolution = normalizeCode(exercise.solution);
-
-    const response = await fetch("http://127.0.0.1:11434/api/generate", {
+    const OLLAMA_BASE_URL =
+      process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
