@@ -1,3 +1,5 @@
+require("dotenv").config(); // Agrega esta línea al inicio
+console.log("MONGO_URI:", process.env.MONGO_URI); // Esto debería mostrar tu URI
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -21,16 +23,10 @@ app.use(express.json());
 // Conexión a MongoDB
 (async () => {
   try {
-    await mongoose.connect(
-      process.env.MONGO_URI || "mongodb://localhost/leetcode_app",
-      {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      }
-    );
-    console.log("Conectado a MongoDB");
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("Conectado a MongoDB Atlas");
   } catch (err) {
-    console.error("No se pudo conectar a MongoDB", err);
+    console.error("No se pudo conectar a MongoDB Atlas", err);
   }
 })();
 
