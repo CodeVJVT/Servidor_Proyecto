@@ -1,0 +1,11 @@
+[
+  {
+    "id": "procedimiento-exercise-1",
+    "title": "Ejemplo de Ejercicio de Procedimiento",
+    "description": "Resuelve este problema utilizando procedimientos.",
+    "solution": "function solve() { return true; }",
+    "difficulty": "Fácil",
+    "status": "No completado",
+    "acceptance": 80
+  }
+]
