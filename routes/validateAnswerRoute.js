@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Exercise = require("../models/Exercise");
+const API_BASE_URL = require("../config");
 
 function generateValidationPrompt(
   problemDescription,
@@ -57,9 +58,7 @@ router.post("/validate-answer", async (req, res) => {
 
     const normalizedUserCode = normalizeCode(userCode);
     const normalizedSolution = normalizeCode(exercise.solution);
-    const OLLAMA_BASE_URL =
-      process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+    const response = await fetch(`${API_BASE_URL}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { v4: uuidv4 } = require("uuid"); // Para generar códigos únicos
 const Exercise = require("../models/Exercise"); // Modelo de la base de datos
+const API_BASE_URL = require("../config");
 
 function generatePrompt(topic, level) {
   return `
@@ -121,10 +122,8 @@ router.post("/generate-problem", async (req, res) => {
     });
   }
   try {
-    const fetch = require("node-fetch");
-    const OLLAMA_BASE_URL =
-      process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+    const fetch = (await import("node-fetch")).default;
+    const response = await fetch(`${API_BASE_URL}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
