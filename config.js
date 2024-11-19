@@ -1,1 +1,1 @@
-module.exports = "https://soft-toys-sit.loca.lt";
+module.exports = "https://hip-knives-obey.loca.lt";
