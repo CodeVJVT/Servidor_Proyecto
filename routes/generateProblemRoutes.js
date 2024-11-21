@@ -3,23 +3,229 @@ const router = express.Router();
 const { v4: uuidv4 } = require("uuid"); // Para generar códigos únicos
 const Exercise = require("../models/Exercise"); // Modelo de la base de datos
 const API_BASE_URL = require("../config");
+const ExerciseListing = require("../models/ExerciseListing"); // Importar el modelo
 
-function generatePrompt(topic, level) {
+// Prompt para generar listado de ejercicios
+function generateListingPrompt(topic) {
   return `
-    Genera un problema de codificación en formato JSON con el tema "${topic}" y nivel "${level}". Formato esperado:
+    Eres un experto en programación. Genera un listado de 10 problemas de codificación prácticos relacionados específicamente con el tema "${topic}".
+    Los problemas deben estar diseñados para ser resueltos exclusivamente en el lenguaje JavaScript y no incluir otros lenguajes.
+
+    Divide los problemas en tres niveles de dificultad: básico, intermedio y avanzado.
+    Solo incluye ejercicios prácticos que requieran escribir código en JavaScript para resolverlos.
+
+    El formato esperado es el siguiente:
     {
-        "title": "Título del problema",
-        "description": "Descripción detallada",
-        "exampleInput": "Ejemplo de entrada",
-        "exampleOutput": "Ejemplo de salida",
-        "solution": {
-            "language": "Lenguaje Java",
-            "code": "Código solución",
-            "explanation": "Explicación breve"
-        }
+      "basico": [
+        "Descripción del ejercicio básico 1",
+        "Descripción del ejercicio básico 2"
+      ],
+      "intermedio": [
+        "Descripción del ejercicio intermedio 1",
+        "Descripción del ejercicio intermedio 2"
+      ],
+      "avanzado": [
+        "Descripción del ejercicio avanzado 1",
+        "Descripción del ejercicio avanzado 2"
+      ]
     }
-    `;
+
+    Ejemplo de problemas relacionados al tema "${topic}" y en JavaScript:
+    - Si el tema es "procedimientos", ejemplos incluyen "Escribe un procedimiento en JavaScript que sume dos números" o "Crea un procedimiento que encuentre el número más grande de una lista en JavaScript".
+    - Si el tema es "funciones", ejemplos incluyen "Implementa una función en JavaScript que calcule el área de un triángulo" o "Escribe una función que devuelva todos los números primos en un rango en JavaScript".
+    - Si el tema es "estructuras", ejemplos incluyen "Crea una estructura de datos en JavaScript para una cola (queue)" o "Diseña una estructura para almacenar información de contactos en JavaScript".
+  `;
 }
+
+// Endpoint para generar un listado de ejercicios
+router.post("/generate-listing", async (req, res) => {
+  const { topic } = req.body;
+
+  if (!topic) {
+    return res.status(400).json({
+      success: false,
+      error: "Falta el campo requerido: topic.",
+    });
+  }
+
+  try {
+    const fetch = (await import("node-fetch")).default;
+
+    const response = await fetch(`${API_BASE_URL}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "llama3.2",
+        prompt: generateListingPrompt(topic),
+        format: "json",
+        stream: false,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error en Ollama: ${response.statusText}`);
+    }
+
+    const { response: listingJson } = await response.json();
+    const listings = JSON.parse(listingJson);
+
+    if (!listings.basico || !listings.intermedio || !listings.avanzado) {
+      throw new Error("El listado generado no contiene todos los niveles.");
+    }
+
+    // Eliminar listados anteriores del mismo tema
+    await ExerciseListing.deleteMany({ topic });
+
+    // Guardar el nuevo listado en la base de datos
+    const newListing = new ExerciseListing({ topic, listings });
+    await newListing.save();
+
+    res.json({ success: true, listings });
+  } catch (error) {
+    console.error("Error al generar el listado de ejercicios:", error);
+    res.status(500).json({
+      success: false,
+      error: "Error interno del servidor.",
+    });
+  }
+});
+
+router.get("/listings/:topic", async (req, res) => {
+  const { topic } = req.params;
+
+  try {
+    const listing = await ExerciseListing.findOne({ topic });
+
+    if (!listing) {
+      return res.json({
+        success: true,
+        message: "No se encontró un listado para este tema.",
+        listings: null,
+      });
+    }
+
+    res.json({ success: true, listings: listing.listings });
+  } catch (error) {
+    console.error("Error al obtener el listado de ejercicios:", error);
+    res.status(500).json({
+      success: false,
+      error: "Error interno del servidor.",
+    });
+  }
+});
+
+// Prompt para generar un problema específico
+function generateProblemPrompt(exerciseText) {
+  return `
+    Genera un problema de codificación basado en el siguiente ejercicio:
+    "${exerciseText}"
+
+    El problema debe estar diseñado exclusivamente para ser resuelto en JavaScript. Proporciona un formato JSON con los siguientes campos:
+    {
+      "title": "Título del problema",
+      "description": "Descripción detallada",
+      "exampleInput": "Ejemplo de entrada",
+      "exampleOutput": "Ejemplo de salida",
+      "solution": {
+          "language": "JavaScript",
+          "code": "Código solución en JavaScript",
+          "explanation": "Explicación breve"
+      }
+    }
+
+    Ejemplo de cómo se vería un problema generado:
+    {
+      "title": "Sumar dos números",
+      "description": "Escribe un procedimiento en JavaScript que reciba dos números como entrada y devuelva su suma.",
+      "exampleInput": "2, 3",
+      "exampleOutput": "5",
+      "solution": {
+          "language": "JavaScript",
+          "code": "function sumar(a, b) { return a + b; }",
+          "explanation": "La función sumar toma dos parámetros y devuelve su suma."
+      }
+    }
+  `;
+}
+
+// Endpoint para generar un problema basado en un ejercicio seleccionado
+router.post("/generate-problem", async (req, res) => {
+  const { topic, exerciseText, level } = req.body;
+
+  if (!topic || !exerciseText || !level) {
+    return res.status(400).json({
+      success: false,
+      error: "Faltan campos requeridos: topic, level o exerciseText.",
+    });
+  }
+
+  try {
+    const fetch = (await import("node-fetch")).default;
+
+    const response = await fetch(`${API_BASE_URL}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "llama3.2",
+        prompt: generateProblemPrompt(exerciseText),
+        format: "json",
+        stream: false,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error en Ollama: ${response.statusText}`);
+    }
+
+    const { response: problemJson } = await response.json();
+    const problemData = JSON.parse(problemJson);
+
+    if (
+      !problemData.title ||
+      !problemData.description ||
+      !problemData.exampleInput ||
+      !problemData.exampleOutput ||
+      !problemData.solution
+    ) {
+      throw new Error(
+        "El problema generado no contiene todos los campos necesarios."
+      );
+    }
+
+    // Verificar si el problema ya existe
+    const existingExercise = await Exercise.findOne({
+      title: problemData.title,
+    });
+
+    if (existingExercise) {
+      return res.status(400).json({
+        success: false,
+        error: "El problema ya existe.",
+      });
+    }
+
+    // Guardar el problema en la base de datos
+    const uniqueCode = uuidv4();
+    const newExercise = new Exercise({
+      code: uniqueCode,
+      topic,
+      level, // Guardar el nivel dinámicamente según lo recibido
+      title: problemData.title,
+      description: problemData.description,
+      prompt: generateProblemPrompt(exerciseText),
+      exampleInput: problemData.exampleInput,
+      exampleOutput: problemData.exampleOutput,
+      solution: problemData.solution.code,
+    });
+
+    await newExercise.save();
+
+    res.json({ success: true, problem: newExercise });
+  } catch (error) {
+    console.error("Error al generar el problema:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // Obtener todos los ejercicios generados
 router.get("/all", async (req, res) => {
@@ -38,6 +244,7 @@ router.get("/all", async (req, res) => {
 router.delete("/all", async (req, res) => {
   try {
     await Exercise.deleteMany();
+    await ExerciseListing.deleteMany();
     res.json({
       success: true,
       message: "Todos los ejercicios han sido eliminados.",
@@ -103,124 +310,25 @@ router.put("/:exerciseCode", async (req, res) => {
   }
 });
 
-router.post("/generate-problem", async (req, res) => {
-  const { topic, level } = req.body;
-
-  if (!topic || !level) {
-    return res.status(400).json({
-      success: false,
-      error: "Faltan campos requeridos: topic o level.",
-    });
-  }
-  const validLevels = ["facil", "medio", "dificil"];
-  if (!validLevels.includes(level.toLowerCase())) {
-    return res.status(400).json({
-      success: false,
-      error: `El nivel debe ser uno de los siguientes: ${validLevels.join(
-        ", "
-      )}.`,
-    });
-  }
-  try {
-    const fetch = (await import("node-fetch")).default;
-    const response = await fetch(`${API_BASE_URL}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "llama3.2",
-        prompt: generatePrompt(topic, level),
-        format: "json",
-        stream: false,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error en Ollama: ${response.statusText}`);
-    }
-
-    const { response: problemJson } = await response.json();
-
-    let problemData;
-    try {
-      problemData = JSON.parse(problemJson);
-    } catch (parseError) {
-      throw new Error("La respuesta generada no contiene un JSON válido.");
-    }
-
-    // Validar campos requeridos en la respuesta generada
-    const requiredFields = [
-      "title",
-      "description",
-      "exampleInput",
-      "exampleOutput",
-      "solution",
-    ];
-
-    for (const field of requiredFields) {
-      if (!problemData[field]) {
-        throw new Error(
-          `Falta el campo obligatorio "${field}" en el problema generado.`
-        );
-      }
-    }
-
-    // Validar estructura de la solución
-    if (
-      !problemData.solution.language ||
-      !problemData.solution.code ||
-      !problemData.solution.explanation
-    ) {
-      throw new Error(
-        'El campo "solution" debe contener "language", "code" y "explanation".'
-      );
-    }
-
-    // Generar código único y guardar el problema
-    const uniqueCode = uuidv4();
-    const newExercise = new Exercise({
-      code: uniqueCode,
-      topic,
-      level,
-      title: problemData.title,
-      description: problemData.description,
-      prompt: generatePrompt(topic, level),
-      exampleInput: problemData.exampleInput,
-      exampleOutput: problemData.exampleOutput,
-      solution: problemData.solution.code,
-    });
-
-    await newExercise.save();
-
-    res.json({ success: true, problem: newExercise });
-  } catch (error) {
-    console.error("Error al generar el problema:", error);
-    res
-      .status(500)
-      .json({ success: false, error: "Error interno del servidor." });
-  }
-});
-
-// Obtener ejercicios por tema
+// Obtener ejercicios y listados por tema
 router.get("/topic/:topicId", async (req, res) => {
   const { topicId } = req.params;
 
   try {
     const exercises = await Exercise.find({ topic: topicId });
+    const listings = await ExerciseListing.findOne({ topic: topicId });
 
-    if (!exercises || exercises.length === 0) {
-      return res.json({
-        success: true,
-        message: "No se encontraron ejercicios para este tema.",
-        exercises: [], // Lista vacía
-      });
-    }
-
-    res.json({ success: true, exercises });
+    res.json({
+      success: true,
+      exercises,
+      listings: listings ? listings.listings : null,
+    });
   } catch (error) {
-    console.error("Error al obtener ejercicios:", error);
-    res
-      .status(500)
-      .json({ success: false, error: "Error al obtener ejercicios." });
+    console.error("Error al obtener ejercicios y listados:", error);
+    res.status(500).json({
+      success: false,
+      error: "Error al obtener ejercicios y listados.",
+    });
   }
 });
 
@@ -247,4 +355,5 @@ router.get("/details/:exerciseCode", async (req, res) => {
     });
   }
 });
+
 module.exports = router;

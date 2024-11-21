@@ -1,1 +1,1 @@
-module.exports = "https://soft-toys-sit.loca.lt";
+module.exports = "http://0.0.0.0:11434";
