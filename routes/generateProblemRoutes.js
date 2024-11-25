@@ -49,8 +49,21 @@ router.post("/generate-listing", async (req, res) => {
   }
 
   try {
-    const fetch = (await import("node-fetch")).default;
+    const listing = await ExerciseListing.findOne({ topic });
 
+    if (listing) {
+      // Filtrar ejercicios no seleccionados
+      const filteredListings = {
+        basico: listing.listings.basico.filter((exercise) => !exercise.selected),
+        intermedio: listing.listings.intermedio.filter((exercise) => !exercise.selected),
+        avanzado: listing.listings.avanzado.filter((exercise) => !exercise.selected),
+      };
+
+      return res.json({ success: true, listings: filteredListings });
+    }
+
+    // Si no hay listado existente, genera uno nuevo
+    const fetch = (await import("node-fetch")).default;
     const response = await fetch(`${API_BASE_URL}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -73,10 +86,6 @@ router.post("/generate-listing", async (req, res) => {
       throw new Error("El listado generado no contiene todos los niveles.");
     }
 
-    // Eliminar listados anteriores del mismo tema
-    await ExerciseListing.deleteMany({ topic });
-
-    // Guardar el nuevo listado en la base de datos
     const newListing = new ExerciseListing({ topic, listings });
     await newListing.save();
 
@@ -89,6 +98,7 @@ router.post("/generate-listing", async (req, res) => {
     });
   }
 });
+
 
 router.get("/listings/:topic", async (req, res) => {
   const { topic } = req.params;
@@ -353,6 +363,42 @@ router.get("/details/:exerciseCode", async (req, res) => {
       success: false,
       error: "Error al obtener detalles del ejercicio.",
     });
+  }
+});
+
+router.post("/mark-selected", async (req, res) => {
+  const { topic, category, index } = req.body;
+
+  if (!topic || !category || index === undefined) {
+    return res.status(400).json({
+      success: false,
+      error: "Faltan campos requeridos: topic, category o index.",
+    });
+  }
+
+  try {
+    // Encontrar el listado
+    const listing = await ExerciseListing.findOne({ topic });
+    if (!listing) {
+      return res.status(404).json({
+        success: false,
+        error: "No se encontró el listado de ejercicios.",
+      });
+    }
+
+    // Actualizar el campo `selected`
+    listing.listings[category][index].selected = true;
+    await listing.save();
+
+    res.json({
+      success: true,
+      message: "Ejercicio marcado como seleccionado.",
+    });
+  } catch (error) {
+    console.error("Error al marcar ejercicio como seleccionado:", error);
+    res
+      .status(500)
+      .json({ success: false, error: "Error interno del servidor." });
   }
 });
 
