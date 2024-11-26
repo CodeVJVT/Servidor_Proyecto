@@ -1,2 +1,1 @@
-module.exports = "http://0.0.0.0:11434";
-
+module.exports = "https://8ab4-38-25-34-82.ngrok-free.app";
