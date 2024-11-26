@@ -6,19 +6,19 @@ const ExerciseListingSchema = new mongoose.Schema({
     basico: [
       {
         text: { type: String, required: true },
-        selected: { type: Boolean, default: false }, // Nuevo campo
+        selected: { type: Boolean, default: false },
       },
     ],
     intermedio: [
       {
         text: { type: String, required: true },
-        selected: { type: Boolean, default: false }, // Nuevo campo
+        selected: { type: Boolean, default: false },
       },
     ],
     avanzado: [
       {
         text: { type: String, required: true },
-        selected: { type: Boolean, default: false }, // Nuevo campo
+        selected: { type: Boolean, default: false },
       },
     ],
   },

@@ -5,35 +5,96 @@ const Exercise = require("../models/Exercise"); // Modelo de la base de datos
 const API_BASE_URL = require("../config");
 const ExerciseListing = require("../models/ExerciseListing"); // Importar el modelo
 
-// Prompt para generar listado de ejercicios
-function generateListingPrompt(topic) {
+function generateListingPromptForProcedures(topic) {
   return `
-    Eres un experto en programación. Genera un listado de 10 problemas de codificación prácticos relacionados específicamente con el tema "${topic}".
-    Los problemas deben estar diseñados para ser resueltos exclusivamente en el lenguaje JavaScript y no incluir otros lenguajes.
+    Eres un experto en programación. Genera un listado de 10 problemas prácticos en el tema "${topic}" exclusivamente para procedimientos en JavaScript.
+
+    Asegúrate de que:
+    - Los problemas estén relacionados con procedimientos.
+    - Los procedimientos no devuelvan valores (utilizan console.log u otras acciones visibles en lugar de return).
+    - Incluyan acciones claras y secuenciales.
 
     Divide los problemas en tres niveles de dificultad: básico, intermedio y avanzado.
-    Solo incluye ejercicios prácticos que requieran escribir código en JavaScript para resolverlos.
 
-    El formato esperado es el siguiente:
+    Formato esperado:
     {
       "basico": [
-        "Descripción del ejercicio básico 1",
-        "Descripción del ejercicio básico 2"
+        "Escribe un procedimiento en JavaScript que imprima los números del 1 al 10.",
+        "Crea un procedimiento que reciba un nombre y lo salude en la consola."
       ],
       "intermedio": [
-        "Descripción del ejercicio intermedio 1",
-        "Descripción del ejercicio intermedio 2"
+        "Escribe un procedimiento que lea una lista de números e imprima los números pares.",
+        "Crea un procedimiento que muestre en la consola una tabla de multiplicar de un número dado."
       ],
       "avanzado": [
-        "Descripción del ejercicio avanzado 1",
-        "Descripción del ejercicio avanzado 2"
+        "Diseña un procedimiento que genere un patrón de asteriscos en la consola como una pirámide.",
+        "Implementa un procedimiento que simule una cola (queue) utilizando un array y muestre cada operación realizada."
       ]
     }
 
-    Ejemplo de problemas relacionados al tema "${topic}" y en JavaScript:
-    - Si el tema es "procedimientos", ejemplos incluyen "Escribe un procedimiento en JavaScript que sume dos números" o "Crea un procedimiento que encuentre el número más grande de una lista en JavaScript".
-    - Si el tema es "funciones", ejemplos incluyen "Implementa una función en JavaScript que calcule el área de un triángulo" o "Escribe una función que devuelva todos los números primos en un rango en JavaScript".
-    - Si el tema es "estructuras", ejemplos incluyen "Crea una estructura de datos en JavaScript para una cola (queue)" o "Diseña una estructura para almacenar información de contactos en JavaScript".
+    Asegúrate de que los problemas generados estén relacionados con procedimientos secuenciales en JavaScript.
+  `;
+}
+
+function generateListingPromptForFunctions(topic) {
+  return `
+    Eres un experto en programación. Genera un listado de 10 problemas prácticos en el tema "${topic}" exclusivamente para funciones en JavaScript.
+
+    Asegúrate de que:
+    - Todos los problemas estén relacionados con funciones reutilizables.
+    - Las funciones devuelvan valores utilizando "return".
+    - Las funciones sean específicas y cumplan una única tarea.
+
+    Divide los problemas en tres niveles de dificultad: básico, intermedio y avanzado.
+
+    Formato esperado:
+    {
+      "basico": [
+        "Escribe una función en JavaScript que reciba dos números y devuelva su suma.",
+        "Crea una función que reciba un número y devuelva si es par o impar."
+      ],
+      "intermedio": [
+        "Diseña una función que reciba una lista de números y devuelva el número más grande.",
+        "Escribe una función que reciba una cadena y devuelva cuántas vocales contiene."
+      ],
+      "avanzado": [
+        "Crea una función que reciba un array y devuelva los elementos únicos.",
+        "Implementa una función que calcule el factorial de un número utilizando recursividad."
+      ]
+    }
+
+    Asegúrate de que los problemas generados estén relacionados exclusivamente con funciones reutilizables en JavaScript.
+  `;
+}
+
+function generateListingPromptForStructures(topic) {
+  return `
+    Eres un experto en programación. Genera un listado de 10 problemas prácticos en el tema "${topic}" relacionados con estructuras de control y secuenciales en JavaScript.
+
+    Asegúrate de que:
+    - Los problemas se enfoquen en estructuras como bucles, condicionales y estructuras básicas de control.
+    - Utilicen control de flujo para manejar las tareas.
+    - Sean aplicables a escenarios prácticos y educativos.
+
+    Divide los problemas en tres niveles de dificultad: básico, intermedio y avanzado.
+
+    Formato esperado:
+    {
+      "basico": [
+        "Escribe un bloque de control que imprima todos los números del 1 al 10 utilizando un bucle for.",
+        "Crea un bloque que evalúe si un número es positivo, negativo o cero utilizando una estructura if-else."
+      ],
+      "intermedio": [
+        "Diseña un bloque de control que recorra una lista de números y calcule la suma de los números pares.",
+        "Crea un bloque que evalúe el día de la semana dado un número del 1 al 7 utilizando switch-case."
+      ],
+      "avanzado": [
+        "Escribe un bloque de control que encuentre el número más grande en una matriz bidimensional.",
+        "Crea un bloque de control que simule un juego de adivinanza, utilizando un bucle while y condiciones para limitar los intentos."
+      ]
+    }
+
+    Asegúrate de que los problemas generados estén relacionados exclusivamente con estructuras de control en JavaScript.
   `;
 }
 
@@ -49,27 +110,33 @@ router.post("/generate-listing", async (req, res) => {
   }
 
   try {
-    const listing = await ExerciseListing.findOne({ topic });
+    // Seleccionar el prompt adecuado basado en el tema
+    const selectPrompt = (topic) => {
+      switch (topic.toLowerCase()) {
+        case "procedimientos":
+          return generateListingPromptForProcedures(topic);
+        case "funciones":
+          return generateListingPromptForFunctions(topic);
+        case "estructuras":
+          return generateListingPromptForStructures(topic);
+        default:
+          throw new Error(
+            "Tema no reconocido. Seleccione: procedimientos, funciones o estructuras."
+          );
+      }
+    };
 
-    if (listing) {
-      // Filtrar ejercicios no seleccionados
-      const filteredListings = {
-        basico: listing.listings.basico.filter((exercise) => !exercise.selected),
-        intermedio: listing.listings.intermedio.filter((exercise) => !exercise.selected),
-        avanzado: listing.listings.avanzado.filter((exercise) => !exercise.selected),
-      };
+    // Eliminar listados previos del tema
+    await ExerciseListing.deleteMany({ topic });
 
-      return res.json({ success: true, listings: filteredListings });
-    }
-
-    // Si no hay listado existente, genera uno nuevo
+    // Llamar a la API para generar nuevos ejercicios
     const fetch = (await import("node-fetch")).default;
     const response = await fetch(`${API_BASE_URL}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "llama3.2",
-        prompt: generateListingPrompt(topic),
+        prompt: selectPrompt(topic), // Usar el prompt adecuado
         format: "json",
         stream: false,
       }),
@@ -86,10 +153,24 @@ router.post("/generate-listing", async (req, res) => {
       throw new Error("El listado generado no contiene todos los niveles.");
     }
 
-    const newListing = new ExerciseListing({ topic, listings });
+    // Transformar los listados a la estructura esperada
+    const formattedListings = {
+      basico: listings.basico.map((text) => ({ text, selected: false })),
+      intermedio: listings.intermedio.map((text) => ({
+        text,
+        selected: false,
+      })),
+      avanzado: listings.avanzado.map((text) => ({ text, selected: false })),
+    };
+
+    // Guardar el nuevo listado en la base de datos
+    const newListing = new ExerciseListing({
+      topic,
+      listings: formattedListings,
+    });
     await newListing.save();
 
-    res.json({ success: true, listings });
+    res.json({ success: true, listings: formattedListings });
   } catch (error) {
     console.error("Error al generar el listado de ejercicios:", error);
     res.status(500).json({
@@ -98,7 +179,6 @@ router.post("/generate-listing", async (req, res) => {
     });
   }
 });
-
 
 router.get("/listings/:topic", async (req, res) => {
   const { topic } = req.params;
@@ -376,26 +456,45 @@ router.post("/mark-selected", async (req, res) => {
     });
   }
 
+  const validCategories = ["basico", "intermedio", "avanzado"];
+  if (!validCategories.includes(category)) {
+    return res.status(400).json({
+      success: false,
+      error: `Categoría inválida. Las categorías válidas son: ${validCategories.join(
+        ", "
+      )}.`,
+    });
+  }
+
   try {
-    // Encontrar el listado
+    // Buscar el listado correspondiente al tema
     const listing = await ExerciseListing.findOne({ topic });
     if (!listing) {
       return res.status(404).json({
         success: false,
-        error: "No se encontró el listado de ejercicios.",
+        error:
+          "No se encontró el listado de ejercicios para el tema especificado.",
       });
     }
 
-    // Actualizar el campo `selected`
+    // Validar índice dentro del rango
+    if (index < 0 || index >= listing.listings[category].length) {
+      return res.status(400).json({
+        success: false,
+        error: "Índice fuera de rango para la categoría especificada.",
+      });
+    }
+
+    // Marcar como seleccionado
     listing.listings[category][index].selected = true;
     await listing.save();
 
     res.json({
       success: true,
-      message: "Ejercicio marcado como seleccionado.",
+      message: "Ejercicio marcado como seleccionado correctamente.",
     });
   } catch (error) {
-    console.error("Error al marcar ejercicio como seleccionado:", error);
+    console.error("Error al marcar el ejercicio como seleccionado:", error);
     res
       .status(500)
       .json({ success: false, error: "Error interno del servidor." });
