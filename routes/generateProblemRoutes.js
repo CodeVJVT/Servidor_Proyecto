@@ -7,7 +7,7 @@ const ExerciseListing = require("../models/ExerciseListing"); // Importar el mod
 
 function generateListingPromptForProcedures(topic) {
   return `
-    Eres un experto en programación. Genera un listado de 10 problemas prácticos en el tema "${topic}" exclusivamente para procedimientos en JavaScript.
+    Eres un experto en programación. Genera un listado de 15 problemas prácticos en el tema "${topic}" exclusivamente para procedimientos en JavaScript.
 
     Asegúrate de que:
     - Los problemas estén relacionados con procedimientos.
@@ -19,16 +19,16 @@ function generateListingPromptForProcedures(topic) {
     Formato esperado:
     {
       "basico": [
-        "Escribe un procedimiento en JavaScript que imprima los números del 1 al 10.",
-        "Crea un procedimiento que reciba un nombre y lo salude en la consola."
+        "Escribe un procedimiento",
+        "Crea un procedimiento"
       ],
       "intermedio": [
-        "Escribe un procedimiento que lea una lista de números e imprima los números pares.",
-        "Crea un procedimiento que muestre en la consola una tabla de multiplicar de un número dado."
+        "Escribe un procedimiento",
+        "Crea un procedimiento"
       ],
       "avanzado": [
-        "Diseña un procedimiento que genere un patrón de asteriscos en la consola como una pirámide.",
-        "Implementa un procedimiento que simule una cola (queue) utilizando un array y muestre cada operación realizada."
+        "Diseña un procedimiento",
+        "Implementa un procedimiento"
       ]
     }
 
@@ -38,7 +38,7 @@ function generateListingPromptForProcedures(topic) {
 
 function generateListingPromptForFunctions(topic) {
   return `
-    Eres un experto en programación. Genera un listado de 10 problemas prácticos en el tema "${topic}" exclusivamente para funciones en JavaScript.
+    Eres un experto en programación. Genera un listado de 15 problemas prácticos en el tema "${topic}" exclusivamente para funciones en JavaScript.
 
     Asegúrate de que:
     - Todos los problemas estén relacionados con funciones reutilizables.
@@ -50,16 +50,16 @@ function generateListingPromptForFunctions(topic) {
     Formato esperado:
     {
       "basico": [
-        "Escribe una función en JavaScript que reciba dos números y devuelva su suma.",
-        "Crea una función que reciba un número y devuelva si es par o impar."
+        "Escribe una función",
+        "Crea una función"
       ],
       "intermedio": [
-        "Diseña una función que reciba una lista de números y devuelva el número más grande.",
-        "Escribe una función que reciba una cadena y devuelva cuántas vocales contiene."
+        "Diseña una función",
+        "Escribe una función"
       ],
       "avanzado": [
-        "Crea una función que reciba un array y devuelva los elementos únicos.",
-        "Implementa una función que calcule el factorial de un número utilizando recursividad."
+        "Crea una función",
+        "Implementa una función"
       ]
     }
 
@@ -69,7 +69,7 @@ function generateListingPromptForFunctions(topic) {
 
 function generateListingPromptForStructures(topic) {
   return `
-    Eres un experto en programación. Genera un listado de 10 problemas prácticos en el tema "${topic}" relacionados con estructuras de control y secuenciales en JavaScript.
+    Eres un experto en programación. Genera un listado de 15 problemas prácticos en el tema "${topic}" relacionados con estructuras de control y secuenciales en JavaScript.
 
     Asegúrate de que:
     - Los problemas se enfoquen en estructuras como bucles, condicionales y estructuras básicas de control.
@@ -81,16 +81,16 @@ function generateListingPromptForStructures(topic) {
     Formato esperado:
     {
       "basico": [
-        "Escribe un bloque de control que imprima todos los números del 1 al 10 utilizando un bucle for.",
-        "Crea un bloque que evalúe si un número es positivo, negativo o cero utilizando una estructura if-else."
+        "Escribe un bloque de control",
+        "Crea un bloque"
       ],
       "intermedio": [
-        "Diseña un bloque de control que recorra una lista de números y calcule la suma de los números pares.",
-        "Crea un bloque que evalúe el día de la semana dado un número del 1 al 7 utilizando switch-case."
+        "Diseña un bloque de control",
+        "Crea un bloque"
       ],
       "avanzado": [
-        "Escribe un bloque de control que encuentre el número más grande en una matriz bidimensional.",
-        "Crea un bloque de control que simule un juego de adivinanza, utilizando un bucle while y condiciones para limitar los intentos."
+        "Escribe un bloque de control",
+        "Crea un bloque de control"
       ]
     }
 
@@ -98,7 +98,6 @@ function generateListingPromptForStructures(topic) {
   `;
 }
 
-// Endpoint para generar un listado de ejercicios
 router.post("/generate-listing", async (req, res) => {
   const { topic } = req.body;
 
@@ -216,11 +215,8 @@ function generateProblemPrompt(exerciseText) {
       "description": "Descripción detallada",
       "exampleInput": "Ejemplo de entrada",
       "exampleOutput": "Ejemplo de salida",
-      "solution": {
-          "language": "JavaScript",
-          "code": "Código solución en JavaScript",
-          "explanation": "Explicación breve"
-      }
+      "language": "JavaScript",
+      "solution": "Código solución en JavaScript"
     }
 
     Ejemplo de cómo se vería un problema generado:
@@ -229,11 +225,8 @@ function generateProblemPrompt(exerciseText) {
       "description": "Escribe un procedimiento en JavaScript que reciba dos números como entrada y devuelva su suma.",
       "exampleInput": "2, 3",
       "exampleOutput": "5",
-      "solution": {
-          "language": "JavaScript",
-          "code": "function sumar(a, b) { return a + b; }",
-          "explanation": "La función sumar toma dos parámetros y devuelve su suma."
-      }
+      "language": "JavaScript",
+      "solution": "function sumar(a, b) { return a + b; }"
     }
   `;
 }
@@ -242,6 +235,7 @@ function generateProblemPrompt(exerciseText) {
 router.post("/generate-problem", async (req, res) => {
   const { topic, exerciseText, level } = req.body;
 
+  // Verificar campos requeridos
   if (!topic || !exerciseText || !level) {
     return res.status(400).json({
       success: false,
@@ -252,6 +246,7 @@ router.post("/generate-problem", async (req, res) => {
   try {
     const fetch = (await import("node-fetch")).default;
 
+    // Llamada a la API externa para generar el problema
     const response = await fetch(`${API_BASE_URL}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -263,6 +258,7 @@ router.post("/generate-problem", async (req, res) => {
       }),
     });
 
+    // Verificar si la respuesta de la API fue exitosa
     if (!response.ok) {
       throw new Error(`Error en Ollama: ${response.statusText}`);
     }
@@ -270,6 +266,7 @@ router.post("/generate-problem", async (req, res) => {
     const { response: problemJson } = await response.json();
     const problemData = JSON.parse(problemJson);
 
+    // Verificar que todos los campos necesarios estén presentes
     if (
       !problemData.title ||
       !problemData.description ||
@@ -282,7 +279,7 @@ router.post("/generate-problem", async (req, res) => {
       );
     }
 
-    // Verificar si el problema ya existe
+    // Verificar si el problema ya existe en la base de datos
     const existingExercise = await Exercise.findOne({
       title: problemData.title,
     });
@@ -298,22 +295,30 @@ router.post("/generate-problem", async (req, res) => {
     const uniqueCode = uuidv4();
     const newExercise = new Exercise({
       code: uniqueCode,
-      topic,
-      level, // Guardar el nivel dinámicamente según lo recibido
+      topic: topic,
+      level: level,
       title: problemData.title,
       description: problemData.description,
-      prompt: generateProblemPrompt(exerciseText),
+      prompt: exerciseText,
       exampleInput: problemData.exampleInput,
       exampleOutput: problemData.exampleOutput,
-      solution: problemData.solution.code,
+      solution: problemData.solution,
     });
 
     await newExercise.save();
 
-    res.json({ success: true, problem: newExercise });
+    // Enviar respuesta exitosa con el nuevo problema
+    return res.status(201).json({
+      success: true,
+      message: "Problema generado y guardado exitosamente.",
+      exercise: newExercise,
+    });
   } catch (error) {
-    console.error("Error al generar el problema:", error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      error: `Error al generar o guardar el problema: ${error.message}`,
+    });
   }
 });
 
